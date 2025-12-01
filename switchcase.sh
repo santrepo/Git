@@ -28,4 +28,17 @@ case variable in
   *) default ;;
 esac
 
+#!/bin/bash
+
+read -p "Enter a filename: " file
+
+case $file in
+  *.txt) echo "Text File" ;;
+  *.sh) echo "Shell Script" ;;
+  *.csv) echo "CSV File" ;;
+  *.log) echo "Log File" ;;
+  *) echo "Unknown File Type" ;;
+esac
+
+
 

@@ -44,6 +44,17 @@ case $day in
   *) echo "Invalid number" ;;
 esac
 
+#!/bin/bash
+
+read -p "Enter a filename: " file
+
+case $file in
+  *.txt) echo "Text File" ;;
+  *.sh) echo "Shell Script" ;;
+  *.csv) echo "CSV File" ;;
+  *.log) echo "Log File" ;;
+  *) echo "Unknown File Type" ;;
+esac
 
 #!/bin/bash
 
@@ -54,3 +65,7 @@ case $ch in
   [a-zA-Z]) echo "Consonant" ;;
   *) echo "Invalid input" ;;
 esac
+
+
+
+

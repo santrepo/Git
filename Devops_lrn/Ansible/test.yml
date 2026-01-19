@@ -1,0 +1,17 @@
+---
+ - hosts: all
+   become: true
+   tasks: 
+    - name: install python
+      apt:
+       name: python3
+       state: present
+       update_cache: yes
+    
+    - name: service check on python
+      ansible.builtin.service:
+       name: python
+       state: started
+
+      
+

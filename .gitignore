@@ -1,0 +1,17 @@
+# Block the entire .terraform folder and everything inside it recursively
+**/.terraform/**
+.terraform/
+
+# Block all state files and their backups anywhere in the project
+**/*.tfstate
+**/*.tfstate.backup
+*.tfstate
+*.tfstate.backup
+
+# Block all executable binary files completely 
+**/*.exe
+*.exe
+
+# Block private SSH keys (highly important for security!)
+**/*.pem
+*.pem

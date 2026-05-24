@@ -1,0 +1,101 @@
+
+###
+app_name: myapp
+app_user: appuser
+app_dir: /opt/myapp
+artifact_repo_url: https://artifactory.company.com/artifactory/libs-release
+artifact_type: jar
+service_name: myapp
+
+env: stage
+artifact_version: "1.2.3-SNAPSHOT"
+
+env: prod
+artifact_version: "1.2.3"
+###
+---
+- name: Production deploy using F5 drain logic
+  hosts: app
+  become: yes
+  serial: 1
+  max_fail_percentage: 0
+
+  vars:
+    pool_member: "{{ inventory_hostname }}:{{ app_port }}"
+
+  tasks:
+
+    - name: Disable node in F5 pool (drain traffic)
+      uri:
+        url: "{{ f5_host }}/mgmt/tm/ltm/pool/~{{ f5_partition }}~{{ f5_pool }}/members/~{{ f5_partition }}~{{ pool_member }}"
+        method: PATCH
+        user: "{{ f5_user }}"
+        password: "{{ f5_pass }}"
+        force_basic_auth: yes
+        body_format: json
+        body:
+          session: user-disabled
+          state: user-down
+        validate_certs: no
+        status_code: 200
+      delegate_to: localhost
+
+    - name: Wait for connections to drain
+      pause:
+        seconds: 30
+
+    - name: Stop application service
+      service:
+        name: myapp
+        state: stopped
+
+    - name: Download artifact from Artifactory
+      get_url:
+        url: "{{ artifact_url }}"
+        dest: "/tmp/myapp.jar"
+        mode: '0644'
+
+    - name: Backup current artifact
+      copy:
+        src: /opt/myapp/myapp.jar
+        dest: "/opt/myapp/backup/myapp.jar.{{ ansible_date_time.iso8601 }}"
+        remote_src: yes
+      ignore_errors: yes
+
+    - name: Deploy new artifact
+      copy:
+        src: /tmp/myapp.jar
+        dest: /opt/myapp/myapp.jar
+        owner: appuser
+        group: appuser
+        mode: '0755'
+        remote_src: yes
+
+    - name: Start application service
+      service:
+        name: myapp
+        state: started
+
+    - name: Application health check
+      uri:
+        url: "http://{{ inventory_hostname }}:8080/health"
+        status_code: 200
+      register: health
+      retries: 5
+      delay: 10
+      until: health.status == 200
+
+    - name: Enable node back in F5 pool
+      uri:
+        url: "{{ f5_host }}/mgmt/tm/ltm/pool/~{{ f5_partition }}~{{ f5_pool }}/members/~{{ f5_partition }}~{{ pool_member }}"
+        method: PATCH
+        user: "{{ f5_user }}"
+        password: "{{ f5_pass }}"
+        force_basic_auth: yes
+        body_format: json
+        body:
+          session: user-enabled
+          state: up
+        validate_certs: no
+        status_code: 200
+      delegate_to: localhost

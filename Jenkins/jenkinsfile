@@ -1,8 +1,106 @@
-pipeline{
+pipeline {
+
     agent any
-    stages {
-        stage('stage 1'){
-          sh 'echo "Hello"'  
-        }
+
+    tools {
+        maven 'Maven3.9'
+        jdk 'JDK17'
     }
+
+    environment {
+
+        GIT_URL   = 'https://git.company.com/payment.git'
+        BRANCH    = 'main'
+        GIT_CREDS = 'git-creds'
+
+        SONAR = 'SonarQube'
+
+        ARTIFACTORY = 'https://artifactory.company.com'
+
+    }
+
+    stages {
+
+        stage('Checkout') {
+
+            steps {
+
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: BRANCH]],
+                    userRemoteConfigs: [[
+                        credentialsId: GIT_CREDS,
+                        url: GIT_URL
+                    ]]
+                ])
+
+            }
+
+        }
+
+        stage('Build') {
+
+            steps {
+
+                sh 'mvn clean compile'
+
+            }
+
+        }
+
+        stage('Code Scan') {
+
+            steps {
+
+                withSonarQubeEnv("${SONAR}") {
+
+                    sh 'mvn sonar:sonar'
+
+                }
+
+            }
+
+        }
+
+        stage('Package') {
+
+            steps {
+
+                sh 'mvn clean package -DskipTests'
+
+            }
+
+        }
+
+        stage('Publish Artifact') {
+
+            steps {
+
+                sh '''
+                jfrog rt upload target/*.jar \
+                libs-release-local/
+                '''
+
+            }
+
+        }
+
+    }
+
+    post {
+
+        success {
+
+            echo "CI Completed Successfully"
+
+        }
+
+        failure {
+
+            echo "Build Failed"
+
+        }
+
+    }
+
 }
